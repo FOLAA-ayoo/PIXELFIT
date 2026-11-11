@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pixelfit – Resize, convert and shrink images</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* LIGHT MODE: white and brown */
+  --text:#2e1c12; --muted:#6b4f3f; --glass:rgba(255,255,255,.5); --glass-strong:rgba(255,255,255,.75);
+  --edge:rgba(255,255,255,.9); --shadow:rgba(90,55,30,.22); --accent:#8b5a3c; --accent2:#b9855a; --field:rgba(255,255,255,.65);
+  --btnshadow:rgba(139,90,60,.4);
+  --bg1:#ffffff; --bg2:#f6ede6; --bg3:#ead9cb; --blob1:#c9986e; --blob2:#8b5a3c; --blob3:#e0bf9f;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    /* DARK MODE: black and green */
+    --text:#eafff3; --muted:#9fd1b5; --glass:rgba(255,255,255,.07); --glass-strong:rgba(255,255,255,.14);
+    --edge:rgba(80,255,160,.25); --shadow:rgba(0,0,0,.6); --accent:#1fd67a; --accent2:#5df0a0; --field:rgba(255,255,255,.08);
+    --btnshadow:rgba(31,214,122,.35); --onaccent:#03130a;
+    --bg1:#000000; --bg2:#000000; --bg3:#02100a; --blob1:#1fd67a; --blob2:#000000; --blob3:#1fd67a; --blobop:.15; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  /* DARK MODE (manual toggle): keep identical to the block above */
+  --text:#eafff3; --muted:#9fd1b5; --glass:rgba(255,255,255,.07); --glass-strong:rgba(255,255,255,.14);
+  --edge:rgba(80,255,160,.25); --shadow:rgba(0,0,0,.6); --accent:#1fd67a; --accent2:#5df0a0; --field:rgba(255,255,255,.08);
+  --btnshadow:rgba(31,214,122,.35); --onaccent:#03130a;
+  --bg1:#000000; --bg2:#000000; --bg3:#02100a; --blob1:#1fd67a; --blob2:#000000; --blob3:#1fd67a; --blobop:.15; color-scheme:dark;
+}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100%;font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text);
+  background:linear-gradient(135deg,var(--bg1),var(--bg2) 55%,var(--bg3));background-attachment:fixed;overflow-x:hidden}
+.blob{position:fixed;border-radius:50%;filter:blur(70px);opacity:var(--blobop,.75);z-index:0;pointer-events:none}
+.b1{width:340px;height:340px;background:var(--blob1);top:-80px;left:-90px}
+.b2{width:380px;height:380px;background:var(--blob2);top:35%;right:-140px}
+.b3{width:300px;height:300px;background:var(--blob3);bottom:-80px;left:10%}
+.wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:22px 16px 170px}
+.glass{background:var(--glass);border:1px solid var(--edge);border-radius:26px;
+  -webkit-backdrop-filter:blur(22px) saturate(160%);backdrop-filter:blur(22px) saturate(160%);
+  box-shadow:0 12px 40px var(--shadow),inset 0 1px 0 rgba(255,255,255,.35)}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+h1{font-size:2rem;font-weight:800;margin:0;letter-spacing:-.03em}
+.sub{margin:2px 0 0;color:var(--muted);font-size:.95rem}
+.icon-btn{width:44px;height:44px;border-radius:50%;border:1px solid var(--edge);background:var(--glass);color:var(--text);cursor:pointer;font-size:1.1rem;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.view{display:none}.view.on{display:block}
+.drop{padding:34px 20px;text-align:center;cursor:pointer;border-style:dashed;border-width:2px}
+.drop.over{background:var(--glass-strong)}
+.drop strong{font-size:1.2rem;display:block;margin-bottom:4px}
+.drop span{color:var(--muted);font-size:.92rem}
+.panel{padding:20px;margin-top:16px}
+.panel h2{margin:0 0 14px;font-size:1.05rem;font-weight:600}
+.row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+.field{flex:1;min-width:110px;display:flex;flex-direction:column;gap:6px;font-size:.88rem;color:var(--muted)}
+input[type=number],select{font:inherit;color:var(--text);background:var(--field);border:1px solid var(--edge);border-radius:14px;padding:12px 14px;width:100%;min-height:46px}
+select option{color:#2e1c12;background:#fff}
+input:focus-visible,select:focus-visible,button:focus-visible,.drop:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.lock{height:46px;width:46px;flex:none;border-radius:14px;border:1px solid var(--edge);background:var(--field);color:var(--text);cursor:pointer;font-size:1.1rem}
+.lock[aria-pressed="true"]{background:var(--accent);color:var(--onaccent,#fff);border-color:transparent}
+.switch{display:flex;align-items:center;gap:10px;font-size:.95rem;margin-bottom:12px;cursor:pointer}
+.switch input{width:20px;height:20px;accent-color:var(--accent)}
+.hint{margin:10px 0 0;font-size:.85rem;color:var(--muted);line-height:1.45}
+.go{width:100%;margin-top:18px;min-height:54px;border:0;border-radius:18px;font:inherit;font-weight:800;font-size:1.05rem;color:var(--onaccent,#fff);cursor:pointer;
+  background:linear-gradient(120deg,var(--accent),var(--accent2));box-shadow:0 10px 26px var(--btnshadow)}
+.go:disabled{opacity:.5;cursor:not-allowed}
+.stage{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stage figure{margin:0;padding:10px;border-radius:20px;background:var(--glass);border:1px solid var(--edge);text-align:center}
+.stage img{max-width:100%;max-height:220px;border-radius:12px;display:block;margin:0 auto;background:repeating-conic-gradient(#8884 0 25%,#fff3 0 50%) 0 0/16px 16px}
+.stage figcaption{font-size:.82rem;color:var(--muted);margin-top:8px}
+.dl{display:inline-block;margin-top:14px;padding:13px 22px;border-radius:16px;background:var(--text);color:var(--bg1);font-weight:700;text-decoration:none}
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.preset{padding:16px;text-align:left;font:inherit;color:var(--text);cursor:pointer;border-radius:20px;border:1px solid var(--edge);background:var(--glass);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.preset b{display:block;font-size:1rem}.preset span{color:var(--muted);font-size:.85rem}
+.help p{line-height:1.55;margin:0 0 12px;color:var(--muted)}.help b{color:var(--text)}
+.ad{margin:20px 0 0;min-height:100px;border-radius:20px;border:1px dashed var(--edge);background:var(--glass);display:flex;align-items:center;justify-content:center;
+  color:var(--muted);font-size:.85rem;text-align:center;padding:8px;overflow:hidden}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;padding:0 14px calc(12px + env(safe-area-inset-bottom,0px))}
+nav .bar{display:flex;gap:6px;padding:8px;width:100%;max-width:440px;border-radius:30px}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border:0;border-radius:22px;background:transparent;color:var(--muted);font:inherit;font-size:.78rem;cursor:pointer;min-height:56px}
+nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button[aria-current="page"]{background:var(--glass-strong);color:var(--text);font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.msg{margin-top:12px;font-size:.9rem;color:var(--text)}
+.sr{position:absolute;left:-9999px}
+@media (max-width:520px){.stage{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Pixelfit</h1>
+      <p class="sub">Resize, convert and shrink images. Nothing leaves your device.</p>
+    </div>
+    <button class="icon-btn" id="theme" aria-label="Switch light or dark theme">◐</button>
+  </header>
+
+  <!-- STUDIO -->
+  <section class="view on" id="v-studio">
+    <div class="glass drop" id="drop" tabindex="0" role="button" aria-label="Choose an image">
+      <strong id="dropTitle">Drop an image here</strong>
+      <span id="dropSub">or tap to pick one from your device</span>
+      <input type="file" id="file" accept="image/*" class="sr" tabindex="-1">
+    </div>
+
+    <div class="glass panel">
+      <h2>Size</h2>
+      <div class="row">
+        <label class="field">Width (px)<input type="number" id="w" min="1" max="12000" inputmode="numeric" value="1080"></label>
+        <button class="lock" id="lock" aria-pressed="true" aria-label="Keep proportions" title="Keep proportions">🔗</button>
+        <label class="field">Height (px)<input type="number" id="h" min="1" max="12000" inputmode="numeric" value="1080"></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <label class="field">If proportions differ
+          <select id="fit"><option value="stretch">Stretch to fit</option><option value="cover">Crop to fill</option></select>
+        </label>
+      </div>
+    </div>
+
+    <div class="glass panel">
+      <h2>File type and storage</h2>
+      <div class="row">
+        <label class="field">Image type
+          <select id="fmt"><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option><option value="image/png">PNG</option></select>
+        </label>
+      </div>
+      <label class="switch" style="margin-top:14px"><input type="checkbox" id="limit"> Limit the file size</label>
+      <div class="row" id="limitRow" hidden>
+        <label class="field">Maximum size<input type="number" id="cap" min="1" value="200" inputmode="decimal"></label>
+        <label class="field">Unit<select id="unit"><option value="1024">KB</option><option value="1048576">MB</option></select></label>
+      </div>
+      <p class="hint" id="fmtHint">JPEG works for photos. It has no transparency.</p>
+      <button class="go" id="go" disabled>Create image</button>
+      <div class="msg" id="msg" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="glass panel" id="result" hidden>
+      <h2>Your image</h2>
+      <div class="stage">
+        <figure><img id="imgBefore" alt="Original image"><figcaption id="capBefore"></figcaption></figure>
+        <figure><img id="imgAfter" alt="Resized image"><figcaption id="capAfter"></figcaption></figure>
+      </div>
+      <a class="dl" id="dl" download>Download image</a>
+    </div>
+  </section>
+
+  <!-- PRESETS -->
+  <section class="view" id="v-presets">
+    <div class="glass panel" style="margin-top:0">
+      <h2>Pick a size</h2>
+      <div class="presets" id="presetList"></div>
+    </div>
+  </section>
+
+  <!-- HELP -->
+  <section class="view" id="v-help">
+    <div class="glass panel help" style="margin-top:0">
+      <h2>How it works</h2>
+      <p><b>Private.</b> Your images are processed in your browser and are never uploaded.</p>
+      <p><b>Limit the file size.</b> Pixelfit lowers quality until the file fits under your limit. PNG is lossless, so choose JPEG or WebP for size limits.</p>
+      <p><b>If the limit can’t be met,</b> reduce the width and height, then try again.</p>
+      <p><b>Transparency.</b> JPEG fills transparent areas with white. Use PNG or WebP to keep them.</p>
+    </div>
+  </section>
+
+  <!-- ===== GOOGLE ADSENSE SLOT =====
+       Replace the placeholder inside #ad-slot with your AdSense snippet:
+       1) your <script async src="https://pagead2.googlesyndication.com/..."> tag
+       2) your <ins class="adsbygoogle" ...></ins> block and the (adsbygoogle = ...).push({}) script -->
+  <div class="ad" id="ad-slot">Ad space:Google AdSense code here</div>
+</div>
+
+<nav aria-label="Main">
+  <div class="glass bar">
+    <button data-view="studio" aria-current="page">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 18l5-5 4 4 3-3 4 4"/></svg>Studio</button>
+    <button data-view="presets">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Sizes</button>
+    <button data-view="help">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1-1.5 2.2M12 17h.01"/></svg>Help</button>
+  </div>
+</nav>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var img=null, ratio=1, locked=true, fileName='image', outUrl=null;
+  var PRESETS=[
+    ['Instagram post',1080,1080],['Instagram story',1080,1920],['YouTube thumbnail',1280,720],
+    ['X header',1500,500],['Profile photo',512,512],['Passport photo',600,600],
+    ['Email friendly',800,600],['Website banner',1920,600]
+  ];
+
+  /* nav */
+  function show(v){
+    document.querySelectorAll('.view').forEach(function(s){s.classList.toggle('on',s.id==='v-'+v)});
+    document.querySelectorAll('nav button').forEach(function(b){
+      if(b.dataset.view===v) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+    });
+    window.scrollTo(0,0);
+  }
+  document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){show(b.dataset.view)}});
+
+  /* theme */
+  $('theme').onclick=function(){
+    var r=document.documentElement, dark=matchMedia('(prefers-color-scheme: dark)').matches;
+    var cur=r.getAttribute('data-theme')||(dark?'dark':'light');
+    r.setAttribute('data-theme',cur==='dark'?'light':'dark');
+  };
+
+  /* presets */
+  PRESETS.forEach(function(p){
+    var b=document.createElement('button'); b.className='preset';
+    b.innerHTML='<b>'+p[0]+'</b><span>'+p[1]+' × '+p[2]+' px</span>';
+    b.onclick=function(){
+      locked=false; syncLock(); $('w').value=p[1]; $('h').value=p[2]; $('fit').value='cover'; show('studio');
+    };
+    $('presetList').appendChild(b);
+  });
+
+  /* lock + dims */
+  function syncLock(){$('lock').setAttribute('aria-pressed',locked)}
+  $('lock').onclick=function(){
+    locked=!locked; syncLock();
+    if(locked){ var w=+$('w').value; if(w) $('h').value=Math.round(w/ratio); }
+  };
+  $('w').oninput=function(){ if(locked&&+$('w').value) $('h').value=Math.max(1,Math.round($('w').value/ratio)); };
+  $('h').oninput=function(){ if(locked&&+$('h').value) $('w').value=Math.max(1,Math.round($('h').value*ratio)); };
+
+  /* format hint + size limit */
+  var HINTS={'image/jpeg':'JPEG works for photos. It has no transparency.',
+    'image/webp':'WebP gives smaller files and keeps transparency.',
+    'image/png':'PNG keeps every pixel and transparency. Size limits don’t apply, so pick JPEG or WebP to set one.'};
+  function fmtChange(){
+    $('fmtHint').textContent=HINTS[$('fmt').value];
+    var png=$('fmt').value==='image/png';
+    $('limit').disabled=png; if(png){$('limit').checked=false;} limitChange();
+  }
+  function limitChange(){ $('limitRow').hidden=!$('limit').checked; }
+  $('fmt').onchange=fmtChange; $('limit').onchange=limitChange;
+
+  /* file loading */
+  var drop=$('drop'), input=$('file');
+  drop.onclick=function(){input.click()};
+  drop.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();} };
+  ['dragover','dragenter'].forEach(function(t){drop.addEventListener(t,function(e){e.preventDefault();drop.classList.add('over')})});
+  ['dragleave','drop'].forEach(function(t){drop.addEventListener(t,function(e){e.preventDefault();drop.classList.remove('over')})});
+  drop.addEventListener('drop',function(e){ if(e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+  input.onchange=function(){ if(input.files[0]) load(input.files[0]); };
+
+  function fmtBytes(n){ return n>=1048576?(n/1048576).toFixed(2)+' MB':Math.max(1,Math.round(n/1024))+' KB'; }
+
+  function load(f){
+    if(!/^image\//.test(f.type)){ $('msg').textContent='That file isn’t an image. Choose a JPEG, PNG, WebP or GIF.'; return; }
+    var url=URL.createObjectURL(f), im=new Image();
+    im.onload=function(){
+      img=im; ratio=im.naturalWidth/im.naturalHeight; fileName=f.name.replace(/\.[^.]+$/,'')||'image';
+      $('w').value=im.naturalWidth; $('h').value=im.naturalHeight; locked=true; syncLock(); $('fit').value='stretch';
+      $('dropTitle').textContent=f.name; $('dropSub').textContent=im.naturalWidth+' × '+im.naturalHeight+' px · '+fmtBytes(f.size)+'. Tap to change.';
+      $('imgBefore').src=url; $('capBefore').textContent='Original · '+im.naturalWidth+' × '+im.naturalHeight+' · '+fmtBytes(f.size);
+      $('go').disabled=false; $('msg').textContent=''; $('result').hidden=true;
+    };
+    im.onerror=function(){ $('msg').textContent='This image couldn’t be opened. Try another file.'; };
+    im.src=url;
+  }
+
+  /* render */
+  function render(w,h){
+    var c=document.createElement('canvas'); c.width=w; c.height=h; var x=c.getContext('2d');
+    if($('fmt').value==='image/jpeg'){ x.fillStyle='#fff'; x.fillRect(0,0,w,h); }
+    x.imageSmoothingQuality='high';
+    var sw=img.naturalWidth, sh=img.naturalHeight, sx=0, sy=0;
+    if($('fit').value==='cover'){
+      var tr=w/h, sr=sw/sh;
+      if(sr>tr){ var nw=sh*tr; sx=(sw-nw)/2; sw=nw; } else { var nh=sw/tr; sy=(sh-nh)/2; sh=nh; }
+    }
+    x.drawImage(img,sx,sy,sw,sh,0,0,w,h);
+    return c;
+  }
+  function blobAt(c,type,q){ return new Promise(function(r){ c.toBlob(r,type,q); }); }
+
+  $('go').onclick=async function(){
+    var w=Math.round(+$('w').value), h=Math.round(+$('h').value);
+    if(!img||!w||!h||w>12000||h>12000){ $('msg').textContent='Enter a width and height between 1 and 12,000 px.'; return; }
+    var type=$('fmt').value, btn=$('go'); btn.disabled=true; $('msg').textContent='Working…';
+    try{
+      var c=render(w,h), blob, note='';
+      if(type==='image/png'){ blob=await blobAt(c,type); }
+      else if($('limit').checked){
+        var cap=Math.round((+$('cap').value||0)*(+$('unit').value));
+        if(cap<1024){ $('msg').textContent='Enter a maximum size of at least 1 KB.'; btn.disabled=false; return; }
+        var lo=.02, hi=.95, best=null;
+        var top=await blobAt(c,type,hi);
+        if(top.size<=cap){ best=top; }
+        else{
+          for(var i=0;i<8;i++){
+            var mid=(lo+hi)/2, b=await blobAt(c,type,mid);
+            if(b.size<=cap){ best=b; lo=mid; } else { hi=mid; }
+          }
+        }
+        if(!best){ best=await blobAt(c,type,.02); note=' Couldn’t reach '+fmtBytes(cap)+'. Lower the width and height, then try again.'; }
+        blob=best;
+      } else { blob=await blobAt(c,type,.92); }
+      if(!blob) throw new Error('empty');
+      if(outUrl) URL.revokeObjectURL(outUrl);
+      outUrl=URL.createObjectURL(blob);
+      var ext={'image/jpeg':'jpg','image/webp':'webp','image/png':'png'}[blob.type]||'img';
+      $('imgAfter').src=outUrl; $('capAfter').textContent='New · '+w+' × '+h+' · '+fmtBytes(blob.size);
+      $('dl').href=outUrl; $('dl').download=fileName+'-'+w+'x'+h+'.'+ext;
+      $('result').hidden=false; $('msg').textContent=note||'Done. Your image is ready to download.';
+      $('result').scrollIntoView({behavior:'smooth',block:'start'});
+    }catch(e){
+      $('msg').textContent='Something went wrong. Try a smaller size or a different image type.';
+    }
+    btn.disabled=false;
+  };
+  fmtChange();
+})();
+</script>
+</body>
+</html>
