@@ -1,0 +1,30 @@
+{
+  "name": "pixelfit",
+  "version": "1.0.0",
+  "description": "Resize, convert and shrink images - Nothing leaves your device",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "test": "echo \"No tests specified\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FOLAA-ayoo/PIXELFIT.git"
+  },
+  "keywords": [
+    "image",
+    "resize",
+    "convert",
+    "compression",
+    "pixelfit"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FOLAA-ayoo/PIXELFIT/issues"
+  },
+  "homepage": "https://github.com/FOLAA-ayoo/PIXELFIT#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
