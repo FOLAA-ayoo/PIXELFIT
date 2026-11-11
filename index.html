@@ -62,8 +62,15 @@ h1{font-size:2rem;font-weight:800;margin:0;letter-spacing:-.03em}
 input[type=number],select{font:inherit;color:var(--text);background:var(--field);border:1px solid var(--edge);border-radius:14px;padding:12px 14px;width:100%;min-height:46px}
 select option{color:#2e1c12;background:#fff}
 input:focus-visible,select:focus-visible,button:focus-visible,.drop:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.lock{height:46px;width:46px;flex:none;border-radius:14px;border:1px solid var(--edge);background:var(--field);color:var(--text);cursor:pointer;font-size:1.1rem}
-.lock[aria-pressed="true"]{background:var(--accent);color:var(--onaccent,#fff);border-color:transparent}
+input[type=range]{width:100%;accent-color:var(--accent);min-height:32px}
+.val{color:var(--text);font-weight:600}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{flex:1;min-width:90px;min-height:46px;border-radius:14px;border:1px solid var(--edge);background:var(--field);color:var(--text);font:inherit;cursor:pointer}
+.chip.solid{background:linear-gradient(120deg,var(--accent),var(--accent2));color:var(--onaccent,#fff);border:0;font-weight:700}
+.chip:disabled{opacity:.5;cursor:not-allowed}
+.cv{margin-top:14px;border-radius:18px;overflow:hidden;border:1px solid var(--edge);text-align:center;background:repeating-conic-gradient(#8884 0 25%,#fff3 0 50%) 0 0/16px 16px}
+.cv canvas{max-width:100%;max-height:60vh;display:block;margin:0 auto;cursor:crosshair;touch-action:manipulation}
+.saved{margin:14px 0 0;font-size:.92rem}
 .switch{display:flex;align-items:center;gap:10px;font-size:.95rem;margin-bottom:12px;cursor:pointer}
 .switch input{width:20px;height:20px;accent-color:var(--accent)}
 .hint{margin:10px 0 0;font-size:.85rem;color:var(--muted);line-height:1.45}
@@ -83,8 +90,8 @@ input:focus-visible,select:focus-visible,button:focus-visible,.drop:focus-visibl
 .ad{margin:20px 0 0;min-height:100px;border-radius:20px;border:1px dashed var(--edge);background:var(--glass);display:flex;align-items:center;justify-content:center;
   color:var(--muted);font-size:.85rem;text-align:center;padding:8px;overflow:hidden}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;padding:0 14px calc(12px + env(safe-area-inset-bottom,0px))}
-nav .bar{display:flex;gap:6px;padding:8px;width:100%;max-width:440px;border-radius:30px}
-nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border:0;border-radius:22px;background:transparent;color:var(--muted);font:inherit;font-size:.78rem;cursor:pointer;min-height:56px}
+nav .bar{display:flex;gap:6px;padding:8px;width:100%;max-width:540px;border-radius:30px}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border:0;border-radius:22px;background:transparent;color:var(--muted);font:inherit;font-size:.72rem;cursor:pointer;min-height:56px}
 nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 nav button[aria-current="page"]{background:var(--glass-strong);color:var(--text);font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
 .msg{margin-top:12px;font-size:.9rem;color:var(--text)}
@@ -107,17 +114,12 @@ nav button[aria-current="page"]{background:var(--glass-strong);color:var(--text)
 
   <!-- STUDIO -->
   <section class="view on" id="v-studio">
-    <div class="glass drop" id="drop" tabindex="0" role="button" aria-label="Choose an image">
-      <strong id="dropTitle">Drop an image here</strong>
-      <span id="dropSub">or pick from your device</span>
-      <input type="file" id="file" accept="image/*" class="sr" tabindex="-1">
-    </div>
+    <div class="glass drop" data-drop tabindex="0" role="button" aria-label="Choose an image"></div>
 
     <div class="glass panel">
       <h2>Size</h2>
       <div class="row">
         <label class="field">Width (px)<input type="number" id="w" min="1" max="12000" inputmode="numeric" value="1080"></label>
-        <button class="lock" id="lock" aria-pressed="true" aria-label="Keep proportions" title="Keep proportions">🔗</button>
         <label class="field">Height (px)<input type="number" id="h" min="1" max="12000" inputmode="numeric" value="1080"></label>
       </div>
       <div class="row" style="margin-top:12px">
@@ -144,13 +146,44 @@ nav button[aria-current="page"]{background:var(--glass-strong);color:var(--text)
       <div class="msg" id="msg" role="status" aria-live="polite"></div>
     </div>
 
-    <div class="glass panel" id="result" hidden>
-      <h2>Your image</h2>
-      <div class="stage">
-        <figure><img id="imgBefore" alt="Original image"><figcaption id="capBefore"></figcaption></figure>
-        <figure><img id="imgAfter" alt="Resized image"><figcaption id="capAfter"></figcaption></figure>
+    <div class="glass panel" id="res-studio" hidden></div>
+  </section>
+
+  <!-- COMPRESS -->
+  <section class="view" id="v-compress">
+    <div class="glass drop" data-drop tabindex="0" role="button" aria-label="Choose an image"></div>
+    <div class="glass panel">
+      <h2>Compress</h2>
+      <label class="field">Quality: <span class="val" id="qv">70%</span>
+        <input type="range" id="q" min="10" max="100" value="70"></label>
+      <p class="hint">Lower quality gives a smaller file. The width and height stay the same.</p>
+      <div class="row" style="margin-top:12px">
+        <label class="field">Image type<select id="cfmt"><option value="image/jpeg">JPEG</option><option value="image/webp">WebP</option></select></label>
       </div>
-      <a class="dl" id="dl" download>Download image</a>
+      <button class="go" id="goc" disabled>Compress image</button>
+      <div class="msg" id="cmsg" role="status" aria-live="polite"></div>
+    </div>
+    <div class="glass panel" id="res-comp" hidden></div>
+  </section>
+
+  <!-- REMOVE BACKGROUND -->
+  <section class="view" id="v-bg">
+    <div class="glass drop" data-drop tabindex="0" role="button" aria-label="Choose an image"></div>
+    <div class="glass panel">
+      <h2>Remove background</h2>
+      <p class="hint" style="margin-top:0">Tap the background on your picture to erase it. Tap more areas to remove more. It works best on plain backgrounds.</p>
+      <label class="field" style="margin-top:12px">Strength: <span class="val" id="tv">30</span>
+        <input type="range" id="tol" min="3" max="100" value="30"></label>
+      <label class="switch" style="margin-top:12px"><input type="checkbox" id="soft" checked> Smooth the edges</label>
+      <label class="switch"><input type="checkbox" id="glob"> Remove the tapped colour everywhere</label>
+      <div class="cv" id="cv" hidden><canvas id="bgc" aria-label="Picture to edit. Tap the background to erase it."></canvas></div>
+      <div class="chips">
+        <button class="chip solid" id="auto" disabled>Auto remove</button>
+        <button class="chip" id="undo" disabled>Undo</button>
+        <button class="chip" id="reset" disabled>Reset</button>
+      </div>
+      <button class="go" id="gob" disabled>Download PNG</button>
+      <div class="msg" id="bmsg" role="status" aria-live="polite"></div>
     </div>
   </section>
 
@@ -170,13 +203,22 @@ nav button[aria-current="page"]{background:var(--glass-strong);color:var(--text)
       <p><b>Limit the file size.</b> Pixelfit lowers quality until the file fits under your limit. PNG is lossless, so choose JPEG or WebP for size limits.</p>
       <p><b>If the limit can’t be met,</b> reduce the width and height, then try again.</p>
       <p><b>Transparency.</b> JPEG fills transparent areas with white. Use PNG or WebP to keep them.</p>
+      <p><b>Compress.</b> Lower the quality slider to make the file smaller without changing its width or height.</p>
+      <p><b>Cutout.</b> Tap the background to erase it. It works best on plain backgrounds, and the result is a transparent PNG.</p>
     </div>
   </section>
 
+</div>
+
+<input type="file" id="file" accept="image/*" class="sr" tabindex="-1">
 <nav aria-label="Main">
   <div class="glass bar">
     <button data-view="studio" aria-current="page">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 18l5-5 4 4 3-3 4 4"/></svg>Studio</button>
+    <button data-view="compress">
+      <svg viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>Compress</button>
+    <button data-view="bg">
+      <svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>Cutout</button>
     <button data-view="presets">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Sizes</button>
     <button data-view="help">
@@ -187,7 +229,7 @@ nav button[aria-current="page"]{background:var(--glass-strong);color:var(--text)
 <script>
 (function(){
   var $=function(id){return document.getElementById(id)};
-  var img=null, ratio=1, locked=true, fileName='image', outUrl=null;
+  var img=null, fileName='image', origSize=0, srcUrl=null, urls={};
   var PRESETS=[
     ['Instagram post',1080,1080],['Instagram story',1080,1920],['YouTube thumbnail',1280,720],
     ['X header',1500,500],['Profile photo',512,512],['Passport photo',600,600],
@@ -211,69 +253,69 @@ nav button[aria-current="page"]{background:var(--glass-strong);color:var(--text)
     r.setAttribute('data-theme',cur==='dark'?'light':'dark');
   };
 
-  /* presets */
+  /* presets: width and height are fully free */
   PRESETS.forEach(function(p){
     var b=document.createElement('button'); b.className='preset';
     b.innerHTML='<b>'+p[0]+'</b><span>'+p[1]+' × '+p[2]+' px</span>';
-    b.onclick=function(){
-      locked=false; syncLock(); $('w').value=p[1]; $('h').value=p[2]; $('fit').value='cover'; show('studio');
-    };
+    b.onclick=function(){ $('w').value=p[1]; $('h').value=p[2]; $('fit').value='cover'; show('studio'); };
     $('presetList').appendChild(b);
   });
-
-  /* lock + dims */
-  function syncLock(){$('lock').setAttribute('aria-pressed',locked)}
-  $('lock').onclick=function(){
-    locked=!locked; syncLock();
-    if(locked){ var w=+$('w').value; if(w) $('h').value=Math.round(w/ratio); }
-  };
-  $('w').oninput=function(){ if(locked&&+$('w').value) $('h').value=Math.max(1,Math.round($('w').value/ratio)); };
-  $('h').oninput=function(){ if(locked&&+$('h').value) $('w').value=Math.max(1,Math.round($('h').value*ratio)); };
 
   /* format hint + size limit */
   var HINTS={'image/jpeg':'JPEG works for photos. It has no transparency.',
     'image/webp':'WebP gives smaller files and keeps transparency.',
     'image/png':'PNG keeps every pixel and transparency. Size limits don’t apply, so pick JPEG or WebP to set one.'};
+  function limitChange(){ $('limitRow').hidden=!$('limit').checked; }
   function fmtChange(){
     $('fmtHint').textContent=HINTS[$('fmt').value];
     var png=$('fmt').value==='image/png';
     $('limit').disabled=png; if(png){$('limit').checked=false;} limitChange();
   }
-  function limitChange(){ $('limitRow').hidden=!$('limit').checked; }
   $('fmt').onchange=fmtChange; $('limit').onchange=limitChange;
 
-  /* file loading */
-  var drop=$('drop'), input=$('file');
-  drop.onclick=function(){input.click()};
-  drop.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();} };
-  ['dragover','dragenter'].forEach(function(t){drop.addEventListener(t,function(e){e.preventDefault();drop.classList.add('over')})});
-  ['dragleave','drop'].forEach(function(t){drop.addEventListener(t,function(e){e.preventDefault();drop.classList.remove('over')})});
-  drop.addEventListener('drop',function(e){ if(e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
-  input.onchange=function(){ if(input.files[0]) load(input.files[0]); };
-
   function fmtBytes(n){ return n>=1048576?(n/1048576).toFixed(2)+' MB':Math.max(1,Math.round(n/1024))+' KB'; }
+
+  /* one picker shared by every tool */
+  var input=$('file');
+  document.querySelectorAll('[data-drop]').forEach(function(d){
+    d.innerHTML='<strong class="dt">Drop an image here</strong><span class="ds">or pick from your device</span>';
+    d.onclick=function(){input.click()};
+    d.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();} };
+    ['dragover','dragenter'].forEach(function(t){d.addEventListener(t,function(e){e.preventDefault();d.classList.add('over')})});
+    ['dragleave','drop'].forEach(function(t){d.addEventListener(t,function(e){e.preventDefault();d.classList.remove('over')})});
+    d.addEventListener('drop',function(e){ if(e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+  });
+  input.onchange=function(){ if(input.files[0]) load(input.files[0]); input.value=''; };
+
+  function setLabel(t,s){
+    document.querySelectorAll('.dt').forEach(function(e){e.textContent=t});
+    document.querySelectorAll('.ds').forEach(function(e){e.textContent=s});
+  }
 
   function load(f){
     if(!/^image\//.test(f.type)){ $('msg').textContent='That file isn’t an image. Choose a JPEG, PNG, WebP or GIF.'; return; }
     var url=URL.createObjectURL(f), im=new Image();
     im.onload=function(){
-      img=im; ratio=im.naturalWidth/im.naturalHeight; fileName=f.name.replace(/\.[^.]+$/,'')||'image';
-      $('w').value=im.naturalWidth; $('h').value=im.naturalHeight; locked=true; syncLock(); $('fit').value='stretch';
-      $('dropTitle').textContent=f.name; $('dropSub').textContent=im.naturalWidth+' × '+im.naturalHeight+' px · '+fmtBytes(f.size)+'. Tap to change.';
-      $('imgBefore').src=url; $('capBefore').textContent='Original · '+im.naturalWidth+' × '+im.naturalHeight+' · '+fmtBytes(f.size);
-      $('go').disabled=false; $('msg').textContent=''; $('result').hidden=true;
+      if(srcUrl) URL.revokeObjectURL(srcUrl);
+      srcUrl=url; img=im; origSize=f.size; fileName=f.name.replace(/\.[^.]+$/,'')||'image';
+      $('w').value=im.naturalWidth; $('h').value=im.naturalHeight; $('fit').value='stretch';
+      setLabel(f.name, im.naturalWidth+' × '+im.naturalHeight+' px · '+fmtBytes(f.size)+'. Tap to change.');
+      $('go').disabled=false; $('goc').disabled=false;
+      ['msg','cmsg'].forEach(function(i){$(i).textContent=''});
+      $('res-studio').hidden=true; $('res-comp').hidden=true;
+      bgInit();
     };
     im.onerror=function(){ $('msg').textContent='This image couldn’t be opened. Try another file.'; };
     im.src=url;
   }
 
-  /* render */
-  function render(w,h){
+  /* shared helpers */
+  function render(w,h,type,fit){
     var c=document.createElement('canvas'); c.width=w; c.height=h; var x=c.getContext('2d');
-    if($('fmt').value==='image/jpeg'){ x.fillStyle='#fff'; x.fillRect(0,0,w,h); }
+    if(type==='image/jpeg'){ x.fillStyle='#fff'; x.fillRect(0,0,w,h); }
     x.imageSmoothingQuality='high';
     var sw=img.naturalWidth, sh=img.naturalHeight, sx=0, sy=0;
-    if($('fit').value==='cover'){
+    if(fit==='cover'){
       var tr=w/h, sr=sw/sh;
       if(sr>tr){ var nw=sh*tr; sx=(sw-nw)/2; sw=nw; } else { var nh=sw/tr; sy=(sh-nh)/2; sh=nh; }
     }
@@ -281,19 +323,31 @@ nav button[aria-current="page"]{background:var(--glass-strong);color:var(--text)
     return c;
   }
   function blobAt(c,type,q){ return new Promise(function(r){ c.toBlob(r,type,q); }); }
+  function showRes(id,blob,w,h,name){
+    var host=$(id); if(urls[id]) URL.revokeObjectURL(urls[id]);
+    var u=urls[id]=URL.createObjectURL(blob);
+    var s=blob.size<origSize?'Saved '+Math.round((1-blob.size/origSize)*100)+'%: '+fmtBytes(origSize)+' down to '+fmtBytes(blob.size)+'.'
+      :'The new file is larger than the original. Try a lower quality or WebP.';
+    host.innerHTML='<h2>Your image</h2><div class="stage">'+
+      '<figure><img alt="Original image" src="'+srcUrl+'"><figcaption>Original · '+img.naturalWidth+' × '+img.naturalHeight+' · '+fmtBytes(origSize)+'</figcaption></figure>'+
+      '<figure><img alt="New image" src="'+u+'"><figcaption>New · '+w+' × '+h+' · '+fmtBytes(blob.size)+'</figcaption></figure></div>'+
+      '<p class="saved">'+s+'</p><a class="dl" href="'+u+'" download="'+name+'">Download image</a>';
+    host.hidden=false; host.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  var EXT={'image/jpeg':'jpg','image/webp':'webp','image/png':'png'};
 
+  /* STUDIO: resize + convert + size limit */
   $('go').onclick=async function(){
     var w=Math.round(+$('w').value), h=Math.round(+$('h').value);
     if(!img||!w||!h||w>12000||h>12000){ $('msg').textContent='Enter a width and height between 1 and 12,000 px.'; return; }
     var type=$('fmt').value, btn=$('go'); btn.disabled=true; $('msg').textContent='Working…';
     try{
-      var c=render(w,h), blob, note='';
+      var c=render(w,h,type,$('fit').value), blob, note='';
       if(type==='image/png'){ blob=await blobAt(c,type); }
       else if($('limit').checked){
         var cap=Math.round((+$('cap').value||0)*(+$('unit').value));
         if(cap<1024){ $('msg').textContent='Enter a maximum size of at least 1 KB.'; btn.disabled=false; return; }
-        var lo=.02, hi=.95, best=null;
-        var top=await blobAt(c,type,hi);
+        var lo=.02, hi=.95, best=null, top=await blobAt(c,type,hi);
         if(top.size<=cap){ best=top; }
         else{
           for(var i=0;i<8;i++){
@@ -301,22 +355,90 @@ nav button[aria-current="page"]{background:var(--glass-strong);color:var(--text)
             if(b.size<=cap){ best=b; lo=mid; } else { hi=mid; }
           }
         }
-        if(!best){ best=await blobAt(c,type,.02); note=' Couldn’t reach '+fmtBytes(cap)+'. Lower the width and height, then try again.'; }
+        if(!best){ best=await blobAt(c,type,.02); note='Couldn’t reach '+fmtBytes(cap)+'. Lower the width and height, then try again.'; }
         blob=best;
       } else { blob=await blobAt(c,type,.92); }
       if(!blob) throw new Error('empty');
-      if(outUrl) URL.revokeObjectURL(outUrl);
-      outUrl=URL.createObjectURL(blob);
-      var ext={'image/jpeg':'jpg','image/webp':'webp','image/png':'png'}[blob.type]||'img';
-      $('imgAfter').src=outUrl; $('capAfter').textContent='New · '+w+' × '+h+' · '+fmtBytes(blob.size);
-      $('dl').href=outUrl; $('dl').download=fileName+'-'+w+'x'+h+'.'+ext;
-      $('result').hidden=false; $('msg').textContent=note||'Done. Your image is ready to download.';
-      $('result').scrollIntoView({behavior:'smooth',block:'start'});
-    }catch(e){
-      $('msg').textContent='Something went wrong. Try a smaller size or a different image type.';
-    }
+      showRes('res-studio',blob,w,h,fileName+'-'+w+'x'+h+'.'+(EXT[blob.type]||'img'));
+      $('msg').textContent=note;
+    }catch(e){ $('msg').textContent='Something went wrong. Try a smaller size or a different image type.'; }
     btn.disabled=false;
   };
+
+  /* COMPRESS: quality slider, same dimensions */
+  $('q').oninput=function(){ $('qv').textContent=$('q').value+'%'; };
+  $('goc').onclick=async function(){
+    var t=$('cfmt').value, btn=$('goc'); btn.disabled=true; $('cmsg').textContent='Working…';
+    try{
+      var c=render(img.naturalWidth,img.naturalHeight,t,'stretch'), blob=await blobAt(c,t,$('q').value/100);
+      if(!blob) throw new Error('empty');
+      showRes('res-comp',blob,c.width,c.height,fileName+'-compressed.'+EXT[t]);
+      $('cmsg').textContent='';
+    }catch(e){ $('cmsg').textContent='Something went wrong. Try another image.'; }
+    btn.disabled=false;
+  };
+
+  /* REMOVE BACKGROUND: tap-to-erase by colour, all on the device */
+  var bgc=$('bgc'), bx=bgc.getContext('2d',{willReadFrequently:true}), stack=[];
+  function sync(){ $('undo').disabled=!stack.length; }
+  function bgInit(){
+    var s=Math.min(1,2000/Math.max(img.naturalWidth,img.naturalHeight));
+    bgc.width=Math.round(img.naturalWidth*s); bgc.height=Math.round(img.naturalHeight*s);
+    bx.clearRect(0,0,bgc.width,bgc.height); bx.drawImage(img,0,0,bgc.width,bgc.height);
+    stack=[]; $('cv').hidden=false;
+    ['auto','reset','gob'].forEach(function(i){$(i).disabled=false}); sync(); $('bmsg').textContent='';
+  }
+  function erase(d,sx,sy,tol,soft,glob){
+    var a=d.data, W=d.width, H=d.height, i0=(sy*W+sx)*4;
+    if(!a[i0+3]) return;
+    var r=a[i0], g=a[i0+1], b=a[i0+2], T=tol*2.2, E=soft?T*1.35:T;
+    function hit(i){
+      var dr=a[i]-r, dg=a[i+1]-g, db=a[i+2]-b, dd=Math.sqrt(dr*dr+dg*dg+db*db);
+      if(dd<=T){ a[i+3]=0; return true; }
+      if(dd<=E){ var al=255*(dd-T)/(E-T); if(al<a[i+3]) a[i+3]=al; }
+      return false;
+    }
+    if(glob){ for(var i=0;i<a.length;i+=4){ if(a[i+3]) hit(i); } return; }
+    var seen=new Uint8Array(W*H), st=[sy*W+sx]; seen[st[0]]=1;
+    while(st.length){
+      var p=st.pop(), x=p%W;
+      if(!a[p*4+3]) continue;
+      if(hit(p*4)){
+        if(x>0&&!seen[p-1]){seen[p-1]=1;st.push(p-1);}
+        if(x<W-1&&!seen[p+1]){seen[p+1]=1;st.push(p+1);}
+        if(p>=W&&!seen[p-W]){seen[p-W]=1;st.push(p-W);}
+        if(p<W*H-W&&!seen[p+W]){seen[p+W]=1;st.push(p+W);}
+      }
+    }
+  }
+  function edit(fn){
+    var d=bx.getImageData(0,0,bgc.width,bgc.height);
+    stack.push(new ImageData(new Uint8ClampedArray(d.data),d.width,d.height));
+    if(stack.length>4) stack.shift();
+    fn(d); bx.putImageData(d,0,0); sync();
+  }
+  bgc.onpointerup=function(e){
+    if(!img) return;
+    var r=bgc.getBoundingClientRect();
+    var x=Math.max(0,Math.min(bgc.width-1,Math.floor((e.clientX-r.left)*bgc.width/r.width)));
+    var y=Math.max(0,Math.min(bgc.height-1,Math.floor((e.clientY-r.top)*bgc.height/r.height)));
+    edit(function(d){ erase(d,x,y,+$('tol').value,$('soft').checked,$('glob').checked); });
+  };
+  $('tol').oninput=function(){ $('tv').textContent=$('tol').value; };
+  $('auto').onclick=function(){
+    var W=bgc.width-1, H=bgc.height-1;
+    edit(function(d){ [[0,0],[W,0],[0,H],[W,H]].forEach(function(c){ erase(d,c[0],c[1],+$('tol').value,$('soft').checked,false); }); });
+  };
+  $('undo').onclick=function(){ var d=stack.pop(); if(d) bx.putImageData(d,0,0); sync(); };
+  $('reset').onclick=function(){ if(img) bgInit(); };
+  $('gob').onclick=function(){
+    bgc.toBlob(function(b){
+      if(!b){ $('bmsg').textContent='Something went wrong. Try again.'; return; }
+      var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fileName+'-no-background.png'; a.click();
+      $('bmsg').textContent='Saved as a transparent PNG.';
+    },'image/png');
+  };
+
   fmtChange();
 })();
 </script>
